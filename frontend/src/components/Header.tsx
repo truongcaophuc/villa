@@ -35,7 +35,6 @@ export const Header = ({ solid = false }: HeaderProps) => {
       return apiGet("/users/me");
     },
   });
-
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener("scroll", handleScroll);
@@ -57,7 +56,7 @@ export const Header = ({ solid = false }: HeaderProps) => {
     try {
       await signOut({ redirect: false });
     } catch {}
-
+    qc.setQueryData(["me"], null);
     setIsUserMenuOpen(false);
   };
 
@@ -77,7 +76,8 @@ export const Header = ({ solid = false }: HeaderProps) => {
   ];
 
   const handleSelect = (lng: "vi" | "en") => {
-    if (typeof document !== "undefined") document.cookie = `NEXT_LOCALE=${lng}; path=/`;
+    if (typeof document !== "undefined")
+      document.cookie = `NEXT_LOCALE=${lng}; path=/`;
     router.refresh();
     setOpen(false);
   };

@@ -57,13 +57,15 @@ type QuillLike = {
     format: string,
     value: string
   ) => void;
-  formatText: (index: number, length: number, value: any) => void;
+  formatText: (index: number, length: number, value: Record<string, unknown>) => void;
 };
 type QuillWithRoot = QuillLike & { root: { innerHTML: string } };
 
 export default function AdminPosts() {
   const [items, setItems] = useState<PostFull[]>([]);
   const [open, setOpen] = useState(false);
+  const [locale, setLocale] = useState<"vi" | "en">("vi");
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [content, setContent] = useState("");
@@ -82,6 +84,25 @@ export default function AdminPosts() {
   const [featuredImageUrl, setFeaturedImageUrl] = useState<
     string | undefined | null
   >(null);
+
+  const resetShared = () => {
+    setTitle("");
+    setSlug("");
+    setContent("");
+    setExcerpt("");
+    setFeaturedImageUrl(undefined);
+  };
+  const resetCreate = () => {
+    resetShared();
+    setSelectedCatIds([]);
+    setSelectedTagIds([]);
+  };
+  const resetEdit = () => {
+    resetShared();
+    setEditing(null);
+    setEditCatIds([]);
+    setEditTagIds([]);
+  };
 
   const baseToolbar = [
     [{ header: [1, 2, false] }],
@@ -124,31 +145,27 @@ export default function AdminPosts() {
     },
   };
 
-  const load = async () => {
+  const load = async (loc?: "vi" | "en") => {
+    const currentLocale = loc ?? locale;
     const [r, cats, tgs] = await Promise.all([
-      apiGet("/posts/with-relations"),
-      apiGet("/categories"),
-      apiGet("/tags"),
+      apiGet(`/posts/with-relations?locale=${currentLocale}`),
+      apiGet(`/categories?locale=${currentLocale}`),
+      apiGet(`/tags?locale=${currentLocale}`),
     ]);
     setItems(r.items || []);
     setCategories(cats || []);
     setTags(tgs || []);
   };
 
-  useEffect(() => {
-    load();
-  }, []);
+
 
   const create = async () => {
     if (!title || !slug || !content) return;
     await apiPost("/posts", {
-      title,
-      slug,
-      content,
-      excerpt,
       featured_image: featuredImageUrl,
       category_ids: selectedCatIds,
       tag_ids: selectedTagIds,
+      translation: { locale, title, slug, content, excerpt },
     });
     setOpen(false);
     setTitle("");
@@ -178,18 +195,27 @@ export default function AdminPosts() {
   };
   const saveEdit = async () => {
     if (!editing) return;
-    await apiPatch(`/posts/${editing.id}`, {
-      title,
-      slug,
-      content,
-      excerpt,
-      featured_image: featuredImageUrl,
-      category_ids: editCatIds,
-      tag_ids: editTagIds,
-    });
-    setEditOpen(false);
-    setEditing(null);
-    await load();
+    if (!slug || !title) {
+      if (typeof window !== "undefined") {
+        window.alert("Tiêu đề và slug không được trống cho bản dịch hiện tại.");
+      }
+      return;
+    }
+    try {
+      await apiPatch(`/posts/${editing.id}`, {
+        featured_image: featuredImageUrl,
+        category_ids: editCatIds,
+        tag_ids: editTagIds,
+        translation: { locale, title, slug, content, excerpt },
+      });
+      setEditOpen(false);
+      setEditing(null);
+      await load();
+    } catch (e) {
+      if (typeof window !== "undefined") {
+        window.alert("Lưu thất bại. Kiểm tra slug bị trùng hoặc dữ liệu không hợp lệ.");
+      }
+    }
   };
   const deleteEdit = async () => {
     if (!editing) return;
@@ -198,12 +224,43 @@ export default function AdminPosts() {
     setEditing(null);
     await load();
   };
+  useEffect(() => {
+    load();
+  }, [locale]);
+
+  const refreshEditing = () => {
+    if (!editOpen || !editing) return;
+    const p = items.find((it) => it.id === editing.id);
+    if (p) {
+      setTitle(p.title || "");
+      setSlug(p.slug || "");
+      setContent(p.content || "");
+      setExcerpt(p.excerpt || "");
+      setEditCatIds((p.categories || []).map((c) => c.id));
+      setEditTagIds((p.tags || []).map((t) => t.id));
+      setFeaturedImageUrl(p.featured_image);
+    }
+  };
+
+  useEffect(() => {
+    refreshEditing();
+  }, [items, locale, editOpen, editing?.id]);
   console.log("content", content);
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Bài viết</h1>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog
+          open={open}
+          onOpenChange={(v) => {
+            setOpen(v);
+            if (v) {
+              resetCreate();
+            } else {
+              resetCreate();
+            }
+          }}
+        >
           <DialogTrigger asChild>
             <Button>Tạo bài viết</Button>
           </DialogTrigger>
@@ -212,6 +269,13 @@ export default function AdminPosts() {
               <DialogTitle>Thêm bài viết</DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">Locale:</span>
+                <select className="border rounded px-2 py-1 text-sm" value={locale} onChange={(e) => { const l = (e.target.value as "vi" | "en"); setLocale(l); }}>
+                  <option value="vi">VI</option>
+                  <option value="en">EN</option>
+                </select>
+              </div>
               <Input
                 placeholder="Tiêu đề"
                 value={title}
@@ -318,6 +382,7 @@ export default function AdminPosts() {
               <TableHead>Tác giả</TableHead>
               <TableHead>Danh mục</TableHead>
               <TableHead>Thẻ</TableHead>
+              <TableHead>Locale</TableHead>
               <TableHead>Hành động</TableHead>
             </TableRow>
           </TableHeader>
@@ -344,6 +409,7 @@ export default function AdminPosts() {
                 <TableCell className="text-muted-foreground">
                   {(p.tags || []).map((t) => t.name).join(", ")}
                 </TableCell>
+                <TableCell className="text-muted-foreground">{locale}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Button
@@ -360,7 +426,7 @@ export default function AdminPosts() {
                       onClick={async (e) => {
                         e.stopPropagation();
                         setEditing(p);
-                        await deleteEdit();
+                        setConfirmDeleteOpen(true);
                       }}
                     >
                       Xóa
@@ -373,12 +439,48 @@ export default function AdminPosts() {
         </Table>
       </div>
 
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+      <Dialog
+        open={editOpen}
+        onOpenChange={(v) => {
+          setEditOpen(v);
+          if (!v) {
+            resetEdit();
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[70vw] w-[95vw] sm:w-[70vw] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Chỉnh sửa bài viết</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">Locale:</span>
+              <select
+                className="border rounded px-2 py-1 text-sm"
+                value={locale}
+                onChange={async (e) => {
+                  const l = e.target.value as "vi" | "en";
+                  setLocale(l);
+                  if (editing) {
+                    const r = await apiGet(`/posts/with-relations?locale=${l}`);
+                    const d = (r.items || []).find((it: PostFull) => it.id === editing.id);
+                    if (d) {
+                      setTitle(d.title || "");
+                      setSlug(d.slug || "");
+                      setContent(d.content || "");
+                      setExcerpt(d.excerpt || "");
+                      setEditCatIds((d.categories || []).map((c: { id: string }) => c.id));
+                      setEditTagIds((d.tags || []).map((t: { id: string }) => t.id));
+                      setFeaturedImageUrl(d.featured_image);
+                    }
+                    await load(l);
+                  }
+                }}
+              >
+                <option value="vi">VI</option>
+                <option value="en">EN</option>
+              </select>
+            </div>
             <Input
               placeholder="Tiêu đề"
               value={title}
@@ -390,6 +492,7 @@ export default function AdminPosts() {
               onChange={(e) => setSlug(e.target.value)}
             />
             <ReactQuill
+              key={`${editing?.id}-${locale}`}
               theme="snow"
               value={content}
               onChange={setContent}
@@ -438,10 +541,29 @@ export default function AdminPosts() {
             />
           </div>
           <DialogFooter>
-            <Button variant="destructive" onClick={deleteEdit}>
+            <Button variant="destructive" onClick={() => setConfirmDeleteOpen(true)}>Xóa</Button>
+            <Button onClick={saveEdit}>Lưu</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">Bạn có chắc muốn xóa?</div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDeleteOpen(false)}>Hủy</Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                await deleteEdit();
+                setConfirmDeleteOpen(false);
+              }}
+            >
               Xóa
             </Button>
-            <Button onClick={saveEdit}>Lưu</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { getToken, clearToken, apiGet } from "@/lib/backend";
+import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 
@@ -191,6 +192,7 @@ export default function AdminLayout({
             className="w-full"
             onClick={() => {
               clearToken();
+              signOut({ redirect: false });
               window.location.reload();
             }}
           >

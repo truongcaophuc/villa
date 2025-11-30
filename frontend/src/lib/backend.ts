@@ -51,6 +51,9 @@ async function tryRefresh() {
   });
   if (!r.ok) {
     clearToken();
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("backend_auth_failed"));
+    }
     return false;
   }
   const data = await r.json();

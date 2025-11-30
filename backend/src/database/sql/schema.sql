@@ -95,3 +95,37 @@ create table if not exists comments (
 );
 
 create index if not exists idx_comments_post_created on comments(post_id, created_at desc);
+-- Translations tables for multi-language content
+create table if not exists post_translations (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid references posts(id) on delete cascade,
+  locale text not null,
+  title text not null,
+  excerpt text,
+  content text,
+  meta_title text,
+  meta_description text,
+  slug text not null,
+  unique(post_id, locale)
+);
+create unique index if not exists post_translations_locale_slug_idx on post_translations(locale, slug);
+
+create table if not exists category_translations (
+  id uuid primary key default gen_random_uuid(),
+  category_id uuid references categories(id) on delete cascade,
+  locale text not null,
+  name text not null,
+  slug text not null,
+  unique(category_id, locale)
+);
+create unique index if not exists category_translations_locale_slug_idx on category_translations(locale, slug);
+
+create table if not exists tag_translations (
+  id uuid primary key default gen_random_uuid(),
+  tag_id uuid references tags(id) on delete cascade,
+  locale text not null,
+  name text not null,
+  slug text not null,
+  unique(tag_id, locale)
+);
+create unique index if not exists tag_translations_locale_slug_idx on tag_translations(locale, slug);

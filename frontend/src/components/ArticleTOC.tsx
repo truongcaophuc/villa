@@ -6,8 +6,11 @@ type TOCItem = { id: string; text: string; level: number; num: string };
 export default function ArticleTOC({ items, className }: { items: TOCItem[]; className?: string }) {
   const onClick = React.useCallback((e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
+    console.log("click", id);
+        
     const el = document.getElementById(id);
     if (el) {
+      console.log("el", el);
       el.scrollIntoView({ behavior: "smooth", block: "center" });
       const url = new URL(window.location.href);
       url.hash = id;

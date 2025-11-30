@@ -6,6 +6,7 @@ import CommentAuthGate from "@/components/CommentAuthGate";
 import CommentsSection from "@/components/CommentsSection";
 import {Badge} from "@/components/ui/badge";
 import { apiGet } from "@/lib/backend";
+import { cookies } from "next/headers";
 import { getServerT } from "@/lib/i18n/server";
 type Post = {
   id: string;
@@ -34,10 +35,12 @@ export default async function ArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const t = await getServerT();
+  const c = await cookies();
+  const locale = (c.get("NEXT_LOCALE")?.value || "vi").startsWith("en") ? "en" : "vi";
   const { slug } = await params;
   let entry: Post | null = null;
   try {
-    entry = await apiGet(`/posts/${slug}`);
+    entry = await apiGet(`/posts/${slug}?locale=${locale}`);
   } catch {}
   if (!entry) {
     return (
@@ -81,7 +84,7 @@ export default async function ArticlePage({
   let relatedTotal = 0;
   try {
     if (primaryCat) {
-      const r = await apiGet(`/posts?categoryId=${primaryCat.id}`);
+      const r = await apiGet(`/posts?categoryId=${primaryCat.id}&locale=${locale}`);
       const items: Post[] = r.items || [];
       relatedTotal = r.total || items.length || 0;
       related = items
@@ -90,6 +93,14 @@ export default async function ArticlePage({
         .map((p) => ({ id: p.id, title: p.title, slug: p.slug, featured_image: p.featured_image }));
     }
   } catch {}
+
+  const htmlWithIds = (a.content || "").replace(/<h([1-6])([^>]*)>([\s\S]*?)<\/h\1>/gi, (_m, lvl, attrs, inner) => {
+    const text = inner.replace(/<[^>]+>/g, "").trim();
+    const id = toSlug(text);
+    const hasId = /\bid\s*=\s*(["']).*?\1/i.test(attrs);
+    const newAttrs = hasId ? attrs.replace(/id\s*=\s*(["']).*?\1/i, `id="${id}"`) : `${attrs} id="${id}"`;
+    return `<h${lvl}${newAttrs}>${inner}</h${lvl}>`;
+  });
 
   return (
     <div className="px-[150px] py-10 mt-20">
@@ -127,10 +138,7 @@ export default async function ArticlePage({
               ))}
             </div>
           ) : null}
-          <div
-            className="prose max-w-none mt-10"
-            dangerouslySetInnerHTML={{ __html: a.content || "" }}
-          />
+          <div className="prose max-w-none mt-10" dangerouslySetInnerHTML={{ __html: htmlWithIds }} />
           {(a.tags && a.tags.length > 0) ? (
             <div className="mt-6 flex flex-wrap gap-2">
               {a.tags.map((t) => (

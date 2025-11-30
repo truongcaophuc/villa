@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { apiGet } from "@/lib/backend";
+import { cookies } from "next/headers";
 import { getServerT } from "@/lib/i18n/server";
 
 type Post = {
@@ -18,6 +19,8 @@ const PAGE_SIZE = 12;
 
 export default async function BlogPage({ searchParams }: { searchParams: Promise<{ page?: string; categoryId?: string; tagId?: string; categorySlug?: string; tagSlug?: string }> }) {
   const t = await getServerT();
+  const c = await cookies();
+  const locale = (c.get("NEXT_LOCALE")?.value || "vi").startsWith("en") ? "en" : "vi";
   const { page, categoryId, tagId, categorySlug, tagSlug } = await searchParams;
   const pageNum = Math.max(1, parseInt(page || "1", 10) || 1);
   let items: Post[] = [];
@@ -28,6 +31,7 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
     if (tagId) params.push(`tagId=${tagId}`);
     if (categorySlug) params.push(`categorySlug=${categorySlug}`);
     if (tagSlug) params.push(`tagSlug=${tagSlug}`);
+    params.push(`locale=${locale}`);
     const data = await apiGet(`/posts?${params.join("&")}`);
     items = data.items || [];
   } catch (e) {

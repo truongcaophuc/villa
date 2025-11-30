@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
 
 const handler = NextAuth({
   providers: [
@@ -13,6 +14,31 @@ const handler = NextAuth({
         },
       },
     }),
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "text" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        const base = (process.env.BACKEND_URL as string) || "http://localhost:4000";
+        const res = await fetch(base + "/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: credentials?.email, password: credentials?.password }),
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        return {
+          id: data.user?.id,
+          name: data.user?.name,
+          email: data.user?.email,
+          image: data.user?.avatar,
+          accessToken: data.access_token,
+          refreshToken: data.refresh_token,
+        } as any;
+      },
+    }),
   ],
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
@@ -21,8 +47,23 @@ const handler = NextAuth({
     signIn: "/login",
   },
   callbacks: {
-    async jwt({ token, account, profile }) {
-      if (account) {
+    async jwt({ token, account, profile, user }) {
+      if (user) {
+        const t = token as Record<string, unknown> & {
+          accessToken?: string;
+          refreshToken?: string;
+          picture?: string;
+          name?: string;
+          email?: string;
+        };
+        const u = user as unknown as { accessToken?: string; refreshToken?: string; image?: string; name?: string; email?: string };
+        t.accessToken = u.accessToken ?? t.accessToken;
+        t.refreshToken = u.refreshToken ?? t.refreshToken;
+        t.picture = u.image ?? t.picture;
+        t.name = u.name ?? t.name;
+        t.email = u.email ?? t.email;
+      }
+      if (account && account.provider === "google") {
         const t = token as Record<string, unknown> & {
           accessToken?: string;
           idToken?: string;
@@ -47,8 +88,9 @@ const handler = NextAuth({
         name?: string;
         email?: string;
       };
-      const s = session as typeof session & { accessToken?: string; idToken?: string };
+      const s = session as typeof session & { accessToken?: string; refreshToken?: string; idToken?: string };
       s.accessToken = t.accessToken;
+      s.refreshToken = (t as any)?.refreshToken as string | undefined;
       s.idToken = t.idToken;
       s.user = {
         name: (t.name as string | undefined) || session.user?.name || undefined,

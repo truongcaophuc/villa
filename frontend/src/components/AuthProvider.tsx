@@ -1,9 +1,9 @@
 "use client";
-import { SessionProvider, useSession } from "next-auth/react";
+import { SessionProvider, useSession, signOut } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { getToken, setToken, setRefreshToken, BACKEND_URL } from "@/lib/backend";
+import { getToken, setToken, setRefreshToken, BACKEND_URL, clearToken } from "@/lib/backend";
 
 function ExchangeEffect() {
   const { data: session } = useSession();
@@ -14,15 +14,18 @@ function ExchangeEffect() {
     const name = session?.user?.name;
     const email = session?.user?.email;
     const avatar = session?.user?.image;
-    if (hasBackend || !idToken) return;
+    if (hasBackend || !idToken || pathname === "/login") return;
     (async () => {
       try {
+        console.log("gọi api exchange")
         const r = await fetch(`${BACKEND_URL}/auth/exchange-google`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id_token: idToken, name, email, avatar })
         });
         if (!r.ok) {
+          clearToken();
+          await signOut({ redirect: false });
           if (typeof window !== "undefined") {
             window.location.href = "/login";
           }
@@ -30,6 +33,8 @@ function ExchangeEffect() {
         }
         const json = await r.json();
         if (!json?.access_token) {
+          clearToken();
+          await signOut({ redirect: false });
           if (typeof window !== "undefined") {
             window.location.href = "/login";
           }
@@ -43,6 +48,20 @@ function ExchangeEffect() {
       } catch {}
     })();
   }, [session, pathname]);
+  useEffect(() => {
+    const onFail = () => {
+      clearToken();
+      signOut({ callbackUrl: "/login" });
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("backend_auth_failed", onFail);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("backend_auth_failed", onFail);
+      }
+    };
+  }, []);
   return null;
 }
 
@@ -62,3 +81,5 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     </SessionProvider>
   );
 }
+
+
