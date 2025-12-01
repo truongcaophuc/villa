@@ -3,6 +3,7 @@ import Image from "next/image";
 import { apiGet } from "@/lib/backend";
 import { cookies } from "next/headers";
 import { getServerT } from "@/lib/i18n/server";
+import { resolveStorageUrl } from "@/lib/media";
 
 type Post = {
   id: string;
@@ -52,7 +53,7 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
             >
               <Link href={`/blog/${slug}`} className="block">
                 <Image
-                  src={featured_image || "/placeholder.svg"}
+                  src={featured_image ? resolveStorageUrl(featured_image) : "/placeholder.svg"}
                   alt={title}
                   width={600}
                   height={360}

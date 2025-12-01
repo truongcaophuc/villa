@@ -19,6 +19,7 @@ authRouter.post("/login", async (req, res, next) => {
   try {
     const body = z.object({ email: z.string().email(), password: z.string().min(6) }).parse(req.body);
     const { data, error } = await supabaseAnon().auth.signInWithPassword({ email: body.email, password: body.password });
+    console.log("login", data, error);
     if (error || !data.session) return res.status(401).json({ code: "login_failed" });
     res.json({ access_token: data.session.access_token, refresh_token: data.session.refresh_token, user: data.user });
   } catch (e) { next(e); }

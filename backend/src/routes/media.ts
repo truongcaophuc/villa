@@ -28,12 +28,14 @@ mediaRouter.post("/upload", authenticate, requireRole("writer"), upload.single("
       await admin.storage.createBucket(env.MEDIA_BUCKET, { public: true });
     }
     
-    const filename = `${user.id}/${Date.now()}_${file.originalname}`;
+    const base = `${Date.now()}_${file.originalname}`;
+    const filename = `${user.id}/${base}`;
     const put = await admin.storage.from(env.MEDIA_BUCKET).upload(filename, file.buffer, { contentType: file.mimetype, upsert: true });
     console.log("put", put);
     if (put.error) return res.status(400).json({ code: "upload_failed" });
-    const url = admin.storage.from(env.MEDIA_BUCKET).getPublicUrl(filename).data.publicUrl;
-    const ins = await c.from("media").insert({ filename, url, mime_type: file.mimetype, owner_id: user.id }).select().limit(1);
+    const encoded = encodeURIComponent(base);
+    const pathOnly = `/storage/v1/object/public/${env.MEDIA_BUCKET}/${user.id}/${encoded}`;
+    const ins = await c.from("media").insert({ filename, url: pathOnly, mime_type: file.mimetype, owner_id: user.id }).select().limit(1);
     if (ins.error) return res.status(400).json({ code: "record_failed" });
     res.json((ins.data && ins.data[0]) || null);
   } catch (e) { next(e); }

@@ -3,6 +3,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPatch } from "@/lib/backend";
+import { resolveStorageUrl } from "@/lib/media";
 
 type CommentItem = {
   id: string;
@@ -92,7 +93,7 @@ export default function CommentsSection({ postId }: { postId: string }) {
       <div className="flex items-start gap-3">
         {me?.avatar ? (
           <Image
-            src={me.avatar}
+            src={resolveStorageUrl(me.avatar)}
             alt="avatar"
             width={36}
             height={36}
@@ -131,7 +132,7 @@ export default function CommentsSection({ postId }: { postId: string }) {
               <div className="flex items-center gap-2 pb-2">
                 {c.user?.avatar ? (
                   <Image
-                    src={c.user.avatar}
+                    src={resolveStorageUrl(c.user.avatar)}
                     alt={c.user.name || c.user.email || ""}
                     width={36}
                     height={36}

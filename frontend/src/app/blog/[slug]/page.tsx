@@ -6,6 +6,7 @@ import CommentAuthGate from "@/components/CommentAuthGate";
 import CommentsSection from "@/components/CommentsSection";
 import {Badge} from "@/components/ui/badge";
 import { apiGet } from "@/lib/backend";
+import { resolveStorageUrl } from "@/lib/media";
 import { cookies } from "next/headers";
 import { getServerT } from "@/lib/i18n/server";
 type Post = {
@@ -109,7 +110,7 @@ export default async function ArticlePage({
           <div className="flex items-center gap-3 mb-6 pb-6 border-b border-muted">
             {a.author?.avatar ? (
               <Image
-                src={a.author.avatar}
+                src={resolveStorageUrl(a.author.avatar)}
                 alt={a.author.name || ""}
                 width={40}
                 height={40}
@@ -161,7 +162,7 @@ export default async function ArticlePage({
                 <li key={rp.id} className="flex items-center gap-3">
                   {rp.featured_image && (
                     <Image
-                      src={rp.featured_image}
+                      src={resolveStorageUrl(rp.featured_image)}
                       alt={rp.title}
                       width={60}
                       height={40}
