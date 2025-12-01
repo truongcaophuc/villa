@@ -268,7 +268,7 @@ postsRouter.post("/", requireRole("writer"), async (req, res, next) => {
     const supabase = (req as any).supabase;
     const admin = supabaseAdmin();
     const body = z.object({
-      featured_image: z.string().url().optional(),
+      featured_image: z.string().optional(),
       published_at: z.string().datetime().optional(),
       is_published: z.boolean().optional(),
       tag_ids: z.array(z.string().uuid()).optional(),
