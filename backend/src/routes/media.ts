@@ -31,7 +31,6 @@ mediaRouter.post("/upload", authenticate, requireRole("writer"), upload.single("
     const base = `${Date.now()}_${file.originalname}`;
     const filename = `${user.id}/${base}`;
     const put = await admin.storage.from(env.MEDIA_BUCKET).upload(filename, file.buffer, { contentType: file.mimetype, upsert: true });
-    console.log("put", put);
     if (put.error) return res.status(400).json({ code: "upload_failed" });
     const encoded = encodeURIComponent(base);
     const pathOnly = `/storage/v1/object/public/${env.MEDIA_BUCKET}/${user.id}/${encoded}`;

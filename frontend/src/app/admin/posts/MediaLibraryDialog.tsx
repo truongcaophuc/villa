@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { apiGet, apiUpload } from "@/lib/backend";
+import { resolveStorageUrl } from "@/lib/media";
 
 type Media = { id: string; filename: string; url: string; mime_type: string };
 
@@ -71,7 +72,7 @@ export default function MediaLibraryDialog({
                 className={`border rounded overflow-hidden text-left ${selectedId === m.id ? "ring-2 ring-primary" : ""}`}
                 onClick={() => setSelectedId(m.id)}
               >
-                <img src={m.url} alt={m.filename} className="w-full h-32 object-cover" />
+                <img src={resolveStorageUrl(m.url)} alt={m.filename} className="w-full h-32 object-cover" />
                 <div className="p-2 text-sm truncate">{m.filename}</div>
               </button>
             ))}

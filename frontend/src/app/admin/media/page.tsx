@@ -4,6 +4,7 @@ import { apiGet, apiUpload, apiDelete } from "@/lib/backend";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Image from "next/image";
+import { resolveStorageUrl } from "@/lib/media";
 
 type Media = { id: string; filename: string; url: string; mime_type: string };
 
@@ -62,9 +63,9 @@ export default function AdminMedia() {
             key={m.id}
             className="border border-border rounded-lg p-4 block transition-all duration-200 hover:bg-muted"
           >
-            <a href={m.url} target="_blank" rel="noreferrer" className="block">
+            <a href={resolveStorageUrl(m.url)} target="_blank" rel="noreferrer" className="block">
               <div className="relative w-full h-40 mb-3 overflow-hidden rounded">
-                <Image src={m.url} alt={m.filename} fill className="object-cover" unoptimized />
+                <Image src={resolveStorageUrl(m.url)} alt={m.filename} fill className="object-cover" unoptimized />
               </div>
             </a>
             <div className="font-medium truncate text-lg">{m.filename}</div>

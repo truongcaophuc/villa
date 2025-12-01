@@ -24,6 +24,7 @@ import dynamic from "next/dynamic";
 import "react-quill-new/dist/quill.snow.css";
 import ChipSelect from "./ChipSelect";
 import MediaLibraryDialog from "./MediaLibraryDialog";
+import { resolveStorageUrl } from "@/lib/media";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
@@ -301,7 +302,7 @@ export default function AdminPosts() {
                 <div className="font-medium">Ảnh đại diện</div>
                 {featuredImageUrl ? (
                   <img
-                    src={featuredImageUrl}
+                    src={resolveStorageUrl(featuredImageUrl || undefined)}
                     alt="featured"
                     className="w-full h-32 object-cover rounded"
                   />
@@ -342,33 +343,33 @@ export default function AdminPosts() {
         </Dialog>
       </div>
 
-      <MediaLibraryDialog
-        open={mediaOpen}
-        onOpenChange={setMediaOpen}
-        onConfirm={(url) => {
-          if (mediaMode === "editor") {
-            const quill = quillRef.current;
-            if (quill) {
-              const idx = insertIndexRef.current ?? 0;
-              quill.insertEmbed(idx, "image", url);
-              quill.formatLine(idx, 1, "align", "center");
-              const caption = "Thêm chú thích...";
-              quill.insertText(idx + 1, "\n" + caption);
-              quill.formatLine(idx + 2, 1, "align", "center");
-              quill.formatText(idx + 2, caption.length, { italic: true });
-              quill.setSelection(idx + 2 + caption.length, 0);
-              const html = (quill as QuillWithRoot).root.innerHTML;
-              setContent(html);
-            } else {
-              const appended = `${content}\n<p><img src="${url}" /></p>`;
-              setContent(appended);
-            }
-          } else {
-            setFeaturedImageUrl(url);
-          }
-          setMediaOpen(false);
-        }}
-      />
+          <MediaLibraryDialog
+            open={mediaOpen}
+            onOpenChange={setMediaOpen}
+            onConfirm={(url) => {
+              if (mediaMode === "editor") {
+                const quill = quillRef.current;
+                if (quill) {
+                  const idx = insertIndexRef.current ?? 0;
+                  quill.insertEmbed(idx, "image", resolveStorageUrl(url));
+                  quill.formatLine(idx, 1, "align", "center");
+                  const caption = "Thêm chú thích...";
+                  quill.insertText(idx + 1, "\n" + caption);
+                  quill.formatLine(idx + 2, 1, "align", "center");
+                  quill.formatText(idx + 2, caption.length, { italic: true });
+                  quill.setSelection(idx + 2 + caption.length, 0);
+                  const html = (quill as QuillWithRoot).root.innerHTML;
+                  setContent(html);
+                } else {
+                  const appended = `${content}\n<p><img src="${resolveStorageUrl(url)}" /></p>`;
+                  setContent(appended);
+                }
+              } else {
+                setFeaturedImageUrl(url);
+              }
+              setMediaOpen(false);
+            }}
+          />
 
       {/* DANH SÁCH BÀI VIẾT */}
       <div className="space-y-3">
@@ -507,7 +508,7 @@ export default function AdminPosts() {
               <div className="font-medium">Ảnh đại diện</div>
               {featuredImageUrl ? (
                 <img
-                  src={featuredImageUrl}
+                  src={resolveStorageUrl(featuredImageUrl || undefined)}
                   alt="featured"
                   className="w-full h-32 object-cover rounded"
                 />
