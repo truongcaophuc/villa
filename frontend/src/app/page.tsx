@@ -21,7 +21,6 @@ const Index = () => {
         <Villa />
       </div>
       <FinalCTA />
-      <SocialMedia />
     </div>
   );
 };

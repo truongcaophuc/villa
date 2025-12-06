@@ -4,6 +4,20 @@ import { Phone, Mail, MapPin, Facebook, Instagram, MessageCircle } from "lucide-
 
 export const Footer = () => {
   const t = getClientT();
+  const handleMessengerClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(
+      "https://www.facebook.com/profile.php?id=61558045738607",
+      "_blank"
+    );
+  };
+  const handleInstagramClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(
+      "https://www.instagram.com/danangvilla05/",
+      "_blank"
+    );
+  };
   return (
     <footer className="bg-primary text-primary-foreground py-12">
       <div className="container mx-auto px-4">
@@ -37,27 +51,20 @@ export const Footer = () => {
           <div>
             <h4 className="font-playfair text-xl font-semibold mb-4">{t("footer.connect")}</h4>
             <div className="flex gap-4 mb-6">
-              <a
-                href="#"
+              <div
+                onClick={handleMessengerClick}
                 className="w-10 h-10 bg-primary-foreground/20 rounded-full flex items-center justify-center hover:bg-secondary transition-colors"
                 aria-label="Facebook"
               >
                 <Facebook className="w-5 h-5" />
-              </a>
-              <a
-                href="#"
+              </div>
+              <div
+                onClick={handleInstagramClick}
                 className="w-10 h-10 bg-primary-foreground/20 rounded-full flex items-center justify-center hover:bg-secondary transition-colors"
                 aria-label="Instagram"
               >
                 <Instagram className="w-5 h-5" />
-              </a>
-              <a
-                href="#"
-                className="w-10 h-10 bg-primary-foreground/20 rounded-full flex items-center justify-center hover:bg-secondary transition-colors"
-                aria-label="Zalo"
-              >
-                <MessageCircle className="w-5 h-5" />
-              </a>
+              </div>
             </div>
             <div className="font-poppins text-sm">
               <p className="mb-2">{t("footer.hours")}</p>

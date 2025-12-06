@@ -7,10 +7,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const hideChrome = pathname === "/login" || pathname.startsWith("/admin");
   return (
-    <>
+    <div className="min-h-screen flex flex-col">
       {hideChrome ? null : <Header solid />}
-      {children}
+      <main className="flex-1">{children}</main>
       {hideChrome ? null : <Footer />}
-    </>
+    </div>
   );
 }

@@ -10,7 +10,7 @@ import { apiGet, getToken } from "@/lib/backend";
 import { signOut } from "next-auth/react";
 import { getClientT } from "@/lib/i18n/client";
 import { FaGlobe } from "react-icons/fa";
-
+import { resolveStorageUrl } from "@/lib/media";
 type HeaderProps = { solid?: boolean };
 type Me = {
   id: string;
@@ -72,6 +72,7 @@ export const Header = ({ solid = false }: HeaderProps) => {
     ...(me?.role && me.role !== "user"
       ? [{ label: t("dashboard"), onClick: () => router.push("/admin") }]
       : []),
+    { label: "Tài khoản", onClick: () => router.push("/account") },
     { label: t("logout"), onClick: handleLogout },
   ];
 
@@ -153,12 +154,14 @@ export const Header = ({ solid = false }: HeaderProps) => {
                     onClick={() => handleSelect("vi")}
                     className="w-full text-left px-3 py-1 hover:bg-gray-100 flex items-center gap-2"
                   >
+                    <Image src="/icons/vietnam.png" alt="VI" width={20} height={20} className="h-4 w-4 object-cover rounded-sm" />
                     VI
                   </button>
                   <button
                     onClick={() => handleSelect("en")}
                     className="w-full text-left px-3 py-1 hover:bg-gray-100 flex items-center gap-2"
                   >
+                    <Image src="/icons/uk.png" alt="EN" width={20} height={20} className="h-4 w-4 object-cover rounded-sm" />
                     EN
                   </button>
                 </div>
@@ -171,7 +174,7 @@ export const Header = ({ solid = false }: HeaderProps) => {
                     {me?.avatar ? (
                       <AvatarImage
                         key={me.avatar}
-                        src={me.avatar}
+                        src={resolveStorageUrl(me.avatar)}
                         alt={userName}
                         className="object-cover"
                         referrerPolicy="no-referrer"

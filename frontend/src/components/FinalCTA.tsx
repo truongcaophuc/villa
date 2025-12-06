@@ -28,6 +28,7 @@ export const FinalCTA = () => {
             variant="hero"
             size="lg"
             className="font-poppins text-lg px-8 py-6"
+            onClick={() => window.open("https://www.instagram.com/danangvilla05/", "_blank")}
           >
             {t("cta.button")}
           </Button>

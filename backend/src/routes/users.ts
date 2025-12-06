@@ -1,9 +1,13 @@
 import { Router } from "express";
 import { z } from "zod";
+import multer from "multer";
 import { authenticate, requireRole } from "../middleware/auth";
-import { supabaseAdmin } from "../config/supabase";
+import { supabaseAdmin, supabaseAnon } from "../config/supabase";
+import { env } from "../config/env";
 
 export const usersRouter = Router();
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 usersRouter.use(authenticate);
 
@@ -17,7 +21,10 @@ usersRouter.get("/me", async (req, res, next) => {
       .eq("id", user.id)
       .limit(1);
     if (error) return res.status(400).json({ code: "fetch_failed" });
-    res.json((data && data[0]) || null);
+    const adminUser = await supabaseAdmin().auth.admin.getUserById(user.id);
+    const hasEmailIdentity = !adminUser.error && !!adminUser.data?.user && (((adminUser.data!.user as any).identities || []).some((i: any) => i.provider === "email"));
+    const profile = (data && data[0]) || null;
+    res.json(profile ? { ...profile, can_change_password: hasEmailIdentity } : null);
   } catch (e) { next(e); }
 });
 
@@ -25,7 +32,7 @@ usersRouter.get("/me", async (req, res, next) => {
 usersRouter.patch("/me", async (req, res, next) => {
   try {
     const user = (req as any).user;
-    const body = z.object({ name: z.string().min(1).optional(), avatar: z.string().url().optional() }).parse(req.body);
+    const body = z.object({ name: z.string().min(1).optional(), avatar: z.string().optional() }).parse(req.body);
     const { data, error } = await supabaseAdmin()
       .from("users")
       .update(body)
@@ -34,6 +41,44 @@ usersRouter.patch("/me", async (req, res, next) => {
       .limit(1);
     if (error) return res.status(400).json({ code: "update_failed" });
     res.json((data && data[0]) || null);
+  } catch (e) { next(e); }
+});
+
+usersRouter.post("/me/avatar", upload.single("file"), async (req, res, next) => {
+  try {
+    const user = (req as any).user;
+    const file = (req as any).file;
+    if (!file) return res.status(400).json({ code: "no_file" });
+    const admin = supabaseAdmin();
+    const bucket = await admin.storage.getBucket(env.MEDIA_BUCKET);
+    if (!bucket.data) {
+      await admin.storage.createBucket(env.MEDIA_BUCKET, { public: true });
+    }
+    const base = `${Date.now()}_${file.originalname}`;
+    const filename = `${user.id}/${base}`;
+    const put = await admin.storage.from(env.MEDIA_BUCKET).upload(filename, file.buffer, { contentType: file.mimetype, upsert: true });
+    if (put.error) return res.status(400).json({ code: "upload_failed" });
+    const encoded = encodeURIComponent(base);
+    const url = `/storage/v1/object/public/${env.MEDIA_BUCKET}/${user.id}/${encoded}`;
+    res.json({ url });
+  } catch (e) { next(e); }
+});
+
+usersRouter.post("/change-password", async (req, res, next) => {
+  try {
+    const user = (req as any).user;
+    const body = z.object({ old_password: z.string().min(6), new_password: z.string().min(6) }).parse(req.body);
+    const adminUser = await supabaseAdmin().auth.admin.getUserById(user.id);
+    if (adminUser.error || !adminUser.data?.user) return res.status(401).json({ code: "unauthorized" });
+    const hasEmailIdentity = ((adminUser.data.user as any).identities || []).some((i: any) => i.provider === "email");
+    if (!hasEmailIdentity) {
+      return res.status(400).json({ code: "oauth_only" });
+    }
+    const verify = await supabaseAnon().auth.signInWithPassword({ email: user.email, password: body.old_password });
+    if (!verify.data?.user) return res.status(401).json({ code: "invalid_credentials" });
+    const upd = await supabaseAdmin().auth.admin.updateUserById(user.id, { password: body.new_password });
+    if (upd.error) return res.status(400).json({ code: "update_failed" });
+    res.json({ ok: true });
   } catch (e) { next(e); }
 });
 

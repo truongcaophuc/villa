@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ChatwootWidget from "@/components/ChatwootWidget";
 
 const SocialMedia = () => {
   const [isScrollVisible, setIsScrollVisible] = useState(false);
   const [isChatwootOpen, setIsChatwootOpen] = useState(false);
-
+  const chatwootBtnRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     const toggleScrollVisibility = () => {
       if (window.pageYOffset > 300) {
@@ -21,22 +21,40 @@ const SocialMedia = () => {
     return () => window.removeEventListener("scroll", toggleScrollVisibility);
   }, []);
 
-  const handleMessengerClick = () => {
-    // Replace with your Facebook page ID or messenger link
-    window.open("https://www.messenger.com/t/450573774801640", "_blank");
+  const handleMessengerClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(
+      "https://www.facebook.com/profile.php?id=61558045738607",
+      "_blank"
+    );
   };
 
-  const handleZaloClick = () => {
+  const handleInstagramClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     // Replace with your Zalo number or Zalo OA link
-    window.open("https://zalo.me/2163862657855887735", "_blank");
+    window.open("https://www.instagram.com/danangvilla05/", "_blank");
   };
 
   const handleChatwootClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Ngăn chặn sự kiện click lan ra ngoài
+    e.stopPropagation();
     if (window.$chatwoot) {
       window.$chatwoot.toggle();
-      setIsChatwootOpen((prev) => !prev); // cập nhật trạng thái ngay lập tức
+      setIsChatwootOpen((prev) => !prev);
+      return;
     }
+    let elapsed = 0;
+    const interval = 100;
+    const max = 3000;
+    const timer = setInterval(() => {
+      elapsed += interval;
+      if (window.$chatwoot) {
+        window.$chatwoot.toggle();
+        setIsChatwootOpen((prev) => !prev);
+        clearInterval(timer);
+      } else if (elapsed >= max) {
+        clearInterval(timer);
+      }
+    }, interval);
   };
 
   const scrollToTop = () => {
@@ -47,26 +65,38 @@ const SocialMedia = () => {
   };
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // Lấy phần tử iframe của Chatwoot (widget thật)
-      const chatwootIframe = document.querySelector("iframe[id^='chatwoot']");
+      if (
+        chatwootBtnRef.current &&
+        chatwootBtnRef.current.contains(event.target as Node)
+      ) {
+        return;
+      }
 
-      if (!chatwootIframe) return;
+      const targets: Element[] = [];
+      const iframe = document.querySelector("iframe[id^='chatwoot']");
+      if (iframe) targets.push(iframe);
+      const widgetContainer = document.querySelector("#woot-widget-container");
+      if (widgetContainer) targets.push(widgetContainer);
+      const chatContainer = document.querySelector("#woot-chat-container");
+      if (chatContainer) targets.push(chatContainer);
+      const holders = Array.from(
+        document.querySelectorAll(".woot-widget-holder, [id^='chatwoot']")
+      );
+      targets.push(...(holders as Element[]));
 
-      // Nếu iframe tồn tại và click không nằm trong nó
-      const clickedInsideWidget =
-        chatwootIframe.contains(event.target as Node) ||
-        chatwootIframe === (event.target as Node);
+      const clickedInside = targets.some(
+        (t) => t.contains(event.target as Node) || t === (event.target as Node)
+      );
 
-      // Nếu widget đang mở mà click ra ngoài thì đóng lại
-      if (!clickedInsideWidget && window.$chatwoot?.isOpen) {
+      if (!clickedInside && isChatwootOpen && window.$chatwoot) {
         window.$chatwoot.toggle();
-        setIsChatwootOpen(false); // cập nhật trạng thái ngay lập tức
+        setIsChatwootOpen(false);
       }
     };
 
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
+  }, [isChatwootOpen]);
 
   return (
     <div className="fixed right-4 bottom-10 z-40 flex flex-col space-y-3">
@@ -76,11 +106,11 @@ const SocialMedia = () => {
         className="relative w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center shake-phone ripple-auto"
         aria-label="Contact via Messenger"
       >
-        <span className="ripple-circle"></span>
-        <span className="ripple-circle ripple-2"></span>
+        <span className="ripple-circle pointer-events-none"></span>
+        <span className="ripple-circle ripple-2 pointer-events-none"></span>
         {/* <span className="ripple-circle ripple-3"></span> */}
         {/* Messenger Icon */}
-         <img
+        <img
           src="/icons/messenger.svg"
           alt="Messenger"
           width={50}
@@ -90,28 +120,27 @@ const SocialMedia = () => {
         />
 
         {/* Tooltip */}
-        <div className="absolute right-16 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white text-sm px-3 py-2 rounded-lg opacity-0 peer-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+        <div className="absolute right-16 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white text-sm px-3 py-2 rounded-lg opacity-0 peer-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap pointer-events-none">
           Chat qua Messenger
           <div className="absolute left-full top-1/2 transform -translate-y-1/2 border-4 border-transparent border-l-gray-800"></div>
         </div>
       </button>
 
-
       <button
         className="relative w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center shake-phone ripple-auto"
-        aria-label="Contact via Zalo"
+        aria-label="Contact via Instagram"
       >
-        <span className="ripple-circle"></span>
-        <span className="ripple-circle ripple-2"></span>
+        <span className="ripple-circle pointer-events-none"></span>
+        <span className="ripple-circle ripple-2 pointer-events-none"></span>
         {/* <span className="ripple-circle ripple-3"></span> */}
-        {/* Zalo Icon */}
+        {/* Instagram Icon */}
         <img
           src="/icons/instagram.svg"
           alt="Instagram"
           width={50}
           height={50}
           className="w-12 h-12 peer"
-          onClick={handleZaloClick}
+          onClick={handleInstagramClick}
         />
 
         {/* Tooltip */}
@@ -121,21 +150,22 @@ const SocialMedia = () => {
         </div>
       </button>
       <button
-        className="relative w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center shake-phone ripple-auto"
+        ref={chatwootBtnRef}
+        className="relative w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center shake-phone ripple-auto bg-white"
         aria-label="Contact via Chatwoot"
       >
-        <span className="ripple-circle"></span>
-        <span className="ripple-circle ripple-2"></span>
-        {/* <span className="ripple-circle ripple-3"></span> */}
+        <span className="ripple-circle pointer-events-none"></span>
+        <span className="ripple-circle ripple-2 pointer-events-none"></span>
+
         {isChatwootOpen ? (
-          // Icon "X" khi widget đang mở
+          // Icon X
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
             strokeWidth={2}
-            stroke="white"
-            className="w-6 h-6 peer"
+            stroke="black"
+            className="w-8 h-8 peer"
             onClick={handleChatwootClick}
           >
             <path
@@ -145,7 +175,7 @@ const SocialMedia = () => {
             />
           </svg>
         ) : (
-          // Icon Chatwoot khi widget đóng
+          // Logo Chatwoot
           <img
             src="/icons/chatwoot.svg"
             alt="Chatwoot"
@@ -156,7 +186,6 @@ const SocialMedia = () => {
           />
         )}
 
-        {/* Tooltip */}
         <div className="absolute right-16 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white text-sm px-3 py-2 rounded-lg opacity-0 peer-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
           Chat qua Chatwoot
           <div className="absolute left-full top-1/2 transform -translate-y-1/2 border-4 border-transparent border-l-gray-800"></div>
